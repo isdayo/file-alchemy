@@ -36,20 +36,27 @@ def convert(src, dst, bitrate, overwrite):
     if dst.exists() and not overwrite:
         return src, "skipped", f"{dst} already exists"
     dst.parent.mkdir(parents=True, exist_ok=True)
+    # Write to a .part file and rename on success, so an interrupted run
+    # never leaves a truncated .mp3 that later runs would skip.
+    part = dst.with_name(dst.name + ".part")
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error",
-        "-y" if overwrite else "-n",
+        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
         "-i", str(src),
         "-vn",
         "-codec:a", "libmp3lame",
         "-b:a", bitrate,
         "-map_metadata", "0",
         "-id3v2_version", "3",
-        str(dst),
+        "-f", "mp3",
+        str(part),
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        return src, "failed", result.stderr.strip()
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            return src, "failed", result.stderr.strip()
+        part.replace(dst)
+    finally:
+        part.unlink(missing_ok=True)
     return src, "converted", str(dst)
 
 

@@ -1,5 +1,6 @@
+# Python cache files
 __pycache__/
-*.pyc
-.DS_Store
-*.wma
-*.mp3
+*.py[cod]
+
+# Partial outputs from interrupted conversions
+*.part
